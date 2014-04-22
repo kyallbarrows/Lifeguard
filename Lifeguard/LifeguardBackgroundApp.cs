@@ -23,8 +23,6 @@ namespace Lifeguard
         private const int MIN_DELAY = 4 * 60 * 1000;
         private const int MAX_DELAY = 7 * 60 * 1000;
 
-        private Thread _workerThread;
-
         static void Main(string[] args)
         {
             //TODO: start this via a service that starts automatically, and periodically ensures the app is still running
@@ -48,7 +46,7 @@ namespace Lifeguard
                 //capture screenshot to temp folder
                 var newImagePath = CaptureScreenshotToTemp();
 
-                //wait 10 minutes, +/- a minute
+                //wait between MIN_DELAY and MAX_DELAY milliseconds
                 var r = new Random((int)DateTime.UtcNow.Ticks);
                 Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
             }
