@@ -85,11 +85,11 @@ namespace Lifeguard
                 }
 
                 var qualityEncoder = System.Drawing.Imaging.Encoder.Quality;
-                var quality = (long)60;
+                var quality = (long)90;
                 var ratio = new EncoderParameter(qualityEncoder, quality);
                 var codecParams = new EncoderParameters(1);
                 codecParams.Param[0] = ratio;
-                var jpegCodecInfo = ImageCodecInfo.GetImageEncoders()[0];
+                var jpegCodecInfo = GetEncoderInfo("image/jpeg");
                 var newPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".jpg");
 
                 using (var graph = Graphics.FromImage(bmpShranken))
@@ -108,6 +108,19 @@ namespace Lifeguard
                 bmpShranken.Save(newPath, jpegCodecInfo, codecParams); // Save to JPG
                 return newPath;
             }
+        }
+
+        private static ImageCodecInfo GetEncoderInfo(String mimeType)
+        {
+            int j;
+            ImageCodecInfo[] encoders;
+            encoders = ImageCodecInfo.GetImageEncoders();
+            for (j = 0; j < encoders.Length; ++j)
+            {
+                if (encoders[j].MimeType == mimeType)
+                    return encoders[j];
+            }
+            return null;
         }
 
     }
