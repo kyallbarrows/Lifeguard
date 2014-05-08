@@ -11,6 +11,10 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Collections.Specialized;
+using Newtonsoft.Json;
 
 namespace Lifeguard
 {
@@ -20,8 +24,10 @@ namespace Lifeguard
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         //TODO: these might be different between free and paid accounts, to save on hosting costs
-        private const int MIN_DELAY = 4 * 60 * 1000;
-        private const int MAX_DELAY = 7 * 60 * 1000;
+        private const int MIN_DELAY = 8 * 60 * 1000;
+        private const int MAX_DELAY = 11 * 60 * 1000;
+
+        private string _accessToken;
 
         static void Main(string[] args)
         {
@@ -40,6 +46,8 @@ namespace Lifeguard
                     ShowWindow(handle, 0);
             }
 
+            _accessToken = GetAccessToken();
+
             //TODO: some way to shut this thing off
             while (true)
             {
@@ -50,6 +58,7 @@ namespace Lifeguard
                 var r = new Random((int)DateTime.UtcNow.Ticks);
                 Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
             }
+
         }
 
 
@@ -104,6 +113,9 @@ namespace Lifeguard
                 //TODO: upload this bizzle to the backend and delete the temp file
                 //TODO: check for duplicate of last snapshot via hashing (or better yet imagemagick so they can be 1% different, like if just the clock changed)
                 bmpShranken.Save(newPath, jpegCodecInfo, codecParams); // Save to JPG
+
+                //could just pass raw bmp, but envisioning this being done later if mobile device is off internet connection
+                AttemptImgurUpload(newPath, _accessToken);
                 return newPath;
             }
         }
@@ -121,5 +133,68 @@ namespace Lifeguard
             return null;
         }
 
+        private string ClientId = "b60c423c4c3cc91";
+        private string ClientSecret = "32bada41201f47856f416b3240bdd10a0b7b389d";
+        //hard-coded refresh token.  Do I win some kind of prize?
+        private string RefreshToken = "fd539ca9ecec7978b42ce3e80d0060ca268ed1c7";
+
+        private string GetAccessToken()
+        {
+            var endpoint = "https://api.imgur.com/oauth2/token";
+            string response = "";
+            using (var wb = new WebClient())
+            {
+                var data = new NameValueCollection();
+                data["refresh_token"] = RefreshToken;
+                data["client_id"] = ClientId;
+                data["client_secret"] = ClientSecret;
+                data["grant_type"] = "refresh_token";
+
+                response = Encoding.ASCII.GetString(wb.UploadValues(endpoint, "POST", data));
+
+            }
+
+            RefreshTokenResponse rtr = JsonConvert.DeserializeObject<RefreshTokenResponse>(response);
+
+            return rtr.access_token;
+        }
+
+        public class RefreshTokenResponse {
+            public String access_token;
+            public int expires_in;
+            public string token_type;
+            public string scope;
+            public string refresh_token;
+            public string account_username;
+        }
+
+        //sends to imgur with no validation of success
+        private string AttemptImgurUpload(string imagePath, string accessToken, bool allowGetNewAccessToken = true)
+        {
+            
+            WebClient w = new WebClient();
+            w.Headers.Add("Authorization", "Bearer " + accessToken);
+//            w.Headers.Add("Authorization", "Bearer " + accessToken); 
+            System.Collections.Specialized.NameValueCollection Keys = new System.Collections.Specialized.NameValueCollection(); 
+            try {
+                Keys.Add("image", Convert.ToBase64String(File.ReadAllBytes(imagePath)));
+                Keys.Add("album", "YWMzE");
+                byte[] responseArray = w.UploadValues("https://api.imgur.com/3/image", Keys); 
+                dynamic result = Encoding.ASCII.GetString(responseArray); 
+                System.Text.RegularExpressions.Regex reg = new System.Text.RegularExpressions.Regex("link\":\"(.*?)\""); 
+                Match match = reg.Match(result); 
+                string url = match.ToString().Replace("link\":\"", "").Replace("\"", "").Replace("\\/", "/"); 
+                return url; 
+            } 
+            catch (WebException we) { 
+                //try it again with new token
+                _accessToken = GetAccessToken();
+                return AttemptImgurUpload(imagePath, _accessToken, false);
+            } 
+            catch (Exception e){
+                return "";
+            }
+
+        }
     }
 }
