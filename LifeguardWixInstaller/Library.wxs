@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+		 <?define VersionNumber="!(bind.FileVersion.uberAgentExe)" ?>
+
+    <?if $(var.Platform) = x64 ?>
+      <?define Win64 = "yes" ?>
+      <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+   <?else ?>
+      <?define Win64 = "no" ?>
+      <?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
+   <?endif ?>
+   <?define lifeguardExeSourcePath = "$(var.ProjectDir)..\Lifeguard\bin\Release\LifeguardBackgroundApp.exe" ?>
+        
+    <Directory Id="TARGETDIR" Name="SourceDir">
+
+      <!-- We start building our directory structure here -->
+      <!-- "ProgramFilesFolder" is a variable containing the absolute path. -->
+      <!-- For a list of folder variables, see: http://msdn.microsoft.com/en-us/library/aa372057%28VS.85%29.aspx -->
+      <Directory Id="$(var.PlatformProgramFilesFolder)">
+
+        <!-- All folders from here on are relative to their parent. -->
+
+        <Directory Id="ProgramFilesHK" Name="!(loc.ManufacturerName)">
+
+          <!-- INSTALLDIR is a property name. We need it later for the UI (to be able to change the install dir. -->
+          <Directory Id="INSTALLDIR" Name="!(loc.ApplicationName)">
+
+            <!-- Define components, the building blocks of MSIs. -->
+            <!-- Rule: A component should only contain items that belong together so strongly that they always need to be installed or removed together. -->
+            <!-- If this means a single file, then your components will contain a single file each. This is not only normal but exactly what you're -->
+            <!-- to do. Don't be afraid, Windows Installer can efficiently handle thousands of components or more, if needed. -->
+
+            <!-- Installation directory as a component so it can be emptied during uninstall (by default files added by someone other than Windows Installer are not removed) -->
+            <Component Id="INSTALLDIR_comp" Guid="60A51CB1-7F43-4D0C-96E9-3308A0829C7B">
+              <CreateFolder />
+              <RemoveFile Id="RemoveFilesFromAppDirectory" Name="*.*" On="uninstall" />
+            </Component>
+
+            <!-- Main program file -->
+            <Component Id="uberAgent.exe_comp" Guid="*" Win64="$(var.Win64)">
+
+              <File Source="$(var.lifeguardExeSourcePath)" Id="lifeguardExe" KeyPath="yes" />
+
+              <!--<ServiceInstall Id="ServiceInstaller" Account="LocalSystem" Description="!(loc.ServiceDescription)" DisplayName="!(loc.ServiceDisplayName)" ErrorControl="normal"
+                              LoadOrderGroup="NetworkProvider" Name="uberAgentSvc" Start="auto" Type="ownProcess" Vital="yes" />
+              <ServiceControl Id="ServiceControl" Name="uberAgentSvc" Start="install" Stop="both" Remove="uninstall" />-->
+
+            </Component>
+
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+	</Fragment>
+</Wix>

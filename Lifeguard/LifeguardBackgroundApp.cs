@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
-using System.Net;
-using System.Text.RegularExpressions;
-using System.Collections.Specialized;
-using Newtonsoft.Json;
+using System.Net.Http;
+using System.Configuration;
+using System.Security.AccessControl;    //MutexAccessRule
+using System.Security.Principal;        //SecurityIdentifier
+using System.Threading.Tasks;
+using System.Reflection;
 
 namespace Lifeguard
 {
@@ -27,13 +27,24 @@ namespace Lifeguard
         private const int MIN_DELAY = 8 * 60 * 1000;
         private const int MAX_DELAY = 11 * 60 * 1000;
 
-        private string _accessToken;
+        private bool _paused = false;
+        private LoginForm _loginForm;
 
+        private static String LifeguardMainMutexGuid = "C7FCF167-4792-4FAF-ACBF-D9F0BB3356F9";
+
+        private NotifyIcon trayIcon;
+        private ContextMenu trayMenu;
+
+        [STAThread]
         static void Main(string[] args)
         {
             //TODO: start this via a service that starts automatically, and periodically ensures the app is still running
             new LifeguardBackgroundApp().Start();
+
         }
+
+
+            
 
         protected void Start() {
             //quick and dirty window hider
@@ -46,21 +57,220 @@ namespace Lifeguard
                     ShowWindow(handle, 0);
             }
 
-            _accessToken = GetAccessToken();
+            // get application GUID as defined in AssemblyInfo.cs
+            string appGuid = LifeguardMainMutexGuid;
 
-            //TODO: some way to shut this thing off
-            while (true)
+            // unique id for global mutex - Global prefix means it is global to the machine
+            string mutexId = string.Format("Global\\{{{0}}}", appGuid);
+
+            // Need a place to store a return value in Mutex() constructor call
+            bool createdNew;
+
+            // edited by Jeremy Wiebe to add example of setting up security for multi-user usage
+            // edited by 'Marc' to work also on localized systems (don't use just "Everyone") 
+            var allowEveryoneRule = new MutexAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), MutexRights.FullControl, AccessControlType.Allow);
+            var securitySettings = new MutexSecurity();
+            securitySettings.AddAccessRule(allowEveryoneRule);
+
+            // edited by MasonGZhwiti to prevent race condition on security settings via VanNguyen
+            using (var mutex = new Mutex(false, mutexId, out createdNew, securitySettings))
             {
-                //capture screenshot to temp folder
-                var newImagePath = CaptureScreenshotToTemp();
+                // edited by acidzombie24
+                var hasHandle = false;
+                try
+                {
+                    try
+                    {
+                        // note, you may want to time out here instead of waiting forever
+                        // edited by acidzombie24
+                        // mutex.WaitOne(Timeout.Infinite, false);
+                        hasHandle = mutex.WaitOne(5000, false);
+                        if (hasHandle == false)
+                            throw new TimeoutException("Timeout waiting for exclusive access");
+                    }
+                    catch (AbandonedMutexException)
+                    {
+                        // Log the fact that the mutex was abandoned in another process, it will still get acquired
+                        hasHandle = true;
+                    }
 
-                //wait between MIN_DELAY and MAX_DELAY milliseconds
-                var r = new Random((int)DateTime.UtcNow.Ticks);
-                Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
+                    Application.EnableVisualStyles();
+
+                    Task.Run(() =>
+                    {
+                        trayMenu = new ContextMenu();
+                        trayMenu.MenuItems.Add("Lifeguard", OnShowForm);
+
+                        trayIcon = new NotifyIcon();
+                        trayIcon.Text = "Lifeguard Accountability";
+
+                        string[] resourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+
+                        var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Lifeguard.TrayIcon.ico");
+                        trayIcon.Icon = new Icon(stream);
+                        trayIcon.Click += new System.EventHandler(OnShowForm);
+
+                        // Add menu to tray icon and show it.
+                        trayIcon.ContextMenu = trayMenu;
+                        trayIcon.Visible = true;
+                        Application.Run();
+                    });
+
+                    //TODO: some way to shut this thing off
+                    while (true)
+                    {
+                        var token = ConfigRepo.GetToken();
+                        if (!string.IsNullOrEmpty(token) && token.Length == 36) {
+                            //capture screenshot to temp folder
+                            using (Bitmap newImage = CaptureScreenshot())
+                            {
+                                PostScreenshot(newImage, token);
+                            }
+                        }
+
+                        //wait between MIN_DELAY and MAX_DELAY milliseconds
+                        var r = new Random((int)DateTime.UtcNow.Ticks);
+                        Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
+                    }
+
+                }
+                finally
+                {
+                    // edited by acidzombie24, added if statement
+                    if (hasHandle)
+                        mutex.ReleaseMutex();
+                }
             }
 
         }
 
+        private void OnShowForm(object sender, EventArgs e)
+        {
+            Task.Run(() => {
+                var loginForm = new LoginForm();
+                Application.Run(loginForm);
+            });
+        }
+
+        protected String GetToken(String username, String password) {
+            var client = new HttpClient();
+
+            var byteArray = Encoding.ASCII.GetBytes(username + ":" + password);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+
+            // Get the response.
+            var response = client.GetAsync("http://lifeguard.pixelheavyindustries.com/wp-json/lifeguard/v1/token").Result;
+
+            // Get the response content.
+            HttpContent responseContent = response.Content;
+
+            // Get the stream of the content.
+            using (var reader = new StreamReader(responseContent.ReadAsStreamAsync().Result))
+            {
+                // Write the output.
+                //strip the " that seem to come along with the token
+                var output = reader.ReadToEndAsync().Result;
+                output = output.Replace("\"", "");
+                return output;
+            }
+
+        }
+
+        protected void PostScreenshot(Bitmap screenshot, String token) {
+            var client = new HttpClient();
+
+            UTF8Encoding encoding = new UTF8Encoding();
+            System.IO.MemoryStream stream = new System.IO.MemoryStream();
+            screenshot.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
+            byte[] imageBytes = stream.ToArray();
+            string base64String = Convert.ToBase64String(imageBytes);
+
+            // Create the HttpContent for the form to be posted.
+            var requestContent = new FormUrlEncodedContent(new[] {
+                new KeyValuePair<string, string>("token", token),
+                new KeyValuePair<string, string>("image", base64String)
+            });
+
+            // Get the response.
+            var response = client.PostAsync("http://lifeguard.pixelheavyindustries.com/wp-json/lifeguard/v1/screenshot",
+                requestContent).Result;
+
+            // Get the response content.
+            HttpContent responseContent = response.Content;
+
+            // Get the stream of the content.
+            using (var reader = new StreamReader(responseContent.ReadAsStreamAsync().Result))
+            {
+                // Write the output.
+                var output = reader.ReadToEndAsync().Result;
+                Console.WriteLine(output);
+            }
+        }
+
+       
+
+        protected Bitmap CaptureScreenshot()
+        {
+            //TODO: properly capture layered windows: http://stackoverflow.com/questions/3072349/capture-screenshot-including-semitransparent-windows-in-net/3072580#3072580
+
+            //TODO: this might be different between free and paid accounts, to save on hosting costs.  Paid might have full-res.
+            var totalWidth = 0;
+            var height = 0;
+
+            foreach (var screen in Screen.AllScreens) {
+                totalWidth += screen.Bounds.Width;
+                height = Math.Max(height, screen.Bounds.Height);
+            }
+
+            var scale = .2f;
+            int shrankenWidth = (int)Math.Floor((float)totalWidth * scale);
+            int shrankenHeight = (int)Math.Floor((float)height * scale);
+            Bitmap bmpShranken = new Bitmap(shrankenWidth, shrankenHeight);
+
+            using (var graph = Graphics.FromImage(bmpShranken))
+            {
+                graph.InterpolationMode = InterpolationMode.High;
+                graph.CompositingQuality = CompositingQuality.HighQuality;
+                graph.SmoothingMode = SmoothingMode.AntiAlias;
+                graph.FillRectangle(new SolidBrush(Color.Black), new RectangleF(0, 0, shrankenWidth, shrankenHeight));
+
+                float x = 0.0f;
+
+                foreach (var screen in Screen.AllScreens)
+                {
+                    using (Bitmap bmpScreenCapture = new Bitmap(screen.Bounds.Width, screen.Bounds.Height))
+                    {
+                        try
+                        {
+                            using (Graphics g = Graphics.FromImage(bmpScreenCapture))
+                            {
+                                g.CopyFromScreen(screen.Bounds.X,
+                                                 screen.Bounds.Y,
+                                                 0, 0,
+                                                 bmpScreenCapture.Size,
+                                                 CopyPixelOperation.SourceCopy);
+
+                                float screenShrankenWidth = scale * bmpScreenCapture.Width;
+                                graph.DrawImage(bmpScreenCapture, 
+                                                new Rectangle(
+                                                    (int)Math.Floor(x), 
+                                                    0, 
+                                                    (int)Math.Floor(screenShrankenWidth), 
+                                                    (int)Math.Floor(scale * shrankenHeight))
+                                                );
+                                x += screenShrankenWidth;
+                            }
+
+                        }
+                        catch (Exception e)
+                        {
+                        }
+                    }
+                }
+            }
+
+            return bmpShranken;
+        }
 
         protected String CaptureScreenshotToTemp()
         {
@@ -72,6 +282,7 @@ namespace Lifeguard
             var origHeight = Screen.PrimaryScreen.Bounds.Height;
             int shrankenWidth = (int)Math.Floor((float)origWidth * scale);
             int shrankenHeight = (int)Math.Floor((float)origHeight * scale);
+
 
             using (Bitmap bmpScreenCapture = new Bitmap(origWidth, origHeight))
             using (Bitmap bmpShranken = new Bitmap(shrankenWidth, shrankenHeight))
@@ -115,7 +326,7 @@ namespace Lifeguard
                 bmpShranken.Save(newPath, jpegCodecInfo, codecParams); // Save to JPG
 
                 //could just pass raw bmp, but envisioning this being done later if mobile device is off internet connection
-                AttemptImgurUpload(newPath, _accessToken);
+                //AttemptImgurUpload(newPath, _accessToken);
                 return newPath;
             }
         }
@@ -131,70 +342,6 @@ namespace Lifeguard
                     return encoders[j];
             }
             return null;
-        }
-
-        private string ClientId = "b60c423c4c3cc91";
-        private string ClientSecret = "32bada41201f47856f416b3240bdd10a0b7b389d";
-        //hard-coded refresh token.  Do I win some kind of prize?
-        private string RefreshToken = "fd539ca9ecec7978b42ce3e80d0060ca268ed1c7";
-
-        private string GetAccessToken()
-        {
-            var endpoint = "https://api.imgur.com/oauth2/token";
-            string response = "";
-            using (var wb = new WebClient())
-            {
-                var data = new NameValueCollection();
-                data["refresh_token"] = RefreshToken;
-                data["client_id"] = ClientId;
-                data["client_secret"] = ClientSecret;
-                data["grant_type"] = "refresh_token";
-
-                response = Encoding.ASCII.GetString(wb.UploadValues(endpoint, "POST", data));
-
-            }
-
-            RefreshTokenResponse rtr = JsonConvert.DeserializeObject<RefreshTokenResponse>(response);
-
-            return rtr.access_token;
-        }
-
-        public class RefreshTokenResponse {
-            public String access_token;
-            public int expires_in;
-            public string token_type;
-            public string scope;
-            public string refresh_token;
-            public string account_username;
-        }
-
-        //sends to imgur with no validation of success
-        private string AttemptImgurUpload(string imagePath, string accessToken, bool allowGetNewAccessToken = true)
-        {
-            
-            WebClient w = new WebClient();
-            w.Headers.Add("Authorization", "Bearer " + accessToken);
-//            w.Headers.Add("Authorization", "Bearer " + accessToken); 
-            System.Collections.Specialized.NameValueCollection Keys = new System.Collections.Specialized.NameValueCollection(); 
-            try {
-                Keys.Add("image", Convert.ToBase64String(File.ReadAllBytes(imagePath)));
-                Keys.Add("album", "YWMzE");
-                byte[] responseArray = w.UploadValues("https://api.imgur.com/3/image", Keys); 
-                dynamic result = Encoding.ASCII.GetString(responseArray); 
-                System.Text.RegularExpressions.Regex reg = new System.Text.RegularExpressions.Regex("link\":\"(.*?)\""); 
-                Match match = reg.Match(result); 
-                string url = match.ToString().Replace("link\":\"", "").Replace("\"", "").Replace("\\/", "/"); 
-                return url; 
-            } 
-            catch (WebException we) { 
-                //try it again with new token
-                _accessToken = GetAccessToken();
-                return AttemptImgurUpload(imagePath, _accessToken, false);
-            } 
-            catch (Exception e){
-                return "";
-            }
-
         }
     }
 }
