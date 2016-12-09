@@ -72,10 +72,10 @@ namespace Lifeguard
                     // Perform your work here.
                     if (hasHandle)
                     {
-                        for (int i = 0; i < 100; i++)
+                        while (true)
                         {
                             var isMainRunning = isMainProcessRunning();
-                            Console.WriteLine("Boop. " + i + "   Is main app running? " + isMainRunning);
+                
                             if (!isMainRunning) {
                                 //restart main app
                                 try

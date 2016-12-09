@@ -27,20 +27,32 @@ namespace Lifeguard
         private const int MIN_DELAY = 8 * 60 * 1000;
         private const int MAX_DELAY = 11 * 60 * 1000;
 
-        private bool _paused = false;
-        private LoginForm _loginForm;
 
         private static String LifeguardMainMutexGuid = "C7FCF167-4792-4FAF-ACBF-D9F0BB3356F9";
 
         private NotifyIcon trayIcon;
         private ContextMenu trayMenu;
 
+        private static readonly log4net.ILog log =
+                    log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+        private static void LogException(Exception e) {
+            if (e is AggregateException) {
+            }
+
+        }
+
         [STAThread]
         static void Main(string[] args)
         {
-            //TODO: start this via a service that starts automatically, and periodically ensures the app is still running
-            new LifeguardBackgroundApp().Start();
-
+            try
+            {
+                //TODO: start this via a service that starts automatically, and periodically ensures the app is still running
+                new LifeguardBackgroundApp().Start();
+            }
+            catch (Exception e) {
+                LogException(e);
+            }
         }
 
 
@@ -124,7 +136,8 @@ namespace Lifeguard
                             //capture screenshot to temp folder
                             using (Bitmap newImage = CaptureScreenshot())
                             {
-                                PostScreenshot(newImage, token);
+                                if (newImage != null)
+                                    PostScreenshot(newImage, token);
                             }
                         }
 
@@ -192,18 +205,24 @@ namespace Lifeguard
             });
 
             // Get the response.
-            var response = client.PostAsync("http://lifeguard.pixelheavyindustries.com/wp-json/lifeguard/v1/screenshot",
-                requestContent).Result;
-
-            // Get the response content.
-            HttpContent responseContent = response.Content;
-
-            // Get the stream of the content.
-            using (var reader = new StreamReader(responseContent.ReadAsStreamAsync().Result))
+            try
             {
-                // Write the output.
-                var output = reader.ReadToEndAsync().Result;
-                Console.WriteLine(output);
+                var response = client.PostAsync("http://lifeguard.pixelheavyindustries.com/wp-json/lifeguard/v1/screenshot",
+                    requestContent).Result;
+
+                // Get the response content.
+                HttpContent responseContent = response.Content;
+
+                // Get the stream of the content.
+                using (var reader = new StreamReader(responseContent.ReadAsStreamAsync().Result))
+                {
+                    // Write the output.
+                    var output = reader.ReadToEndAsync().Result;
+                    Console.WriteLine(output);
+                }
+            }
+            catch (Exception e) {
+                //TODO log error
             }
         }
 
@@ -225,6 +244,9 @@ namespace Lifeguard
             var scale = .2f;
             int shrankenWidth = (int)Math.Floor((float)totalWidth * scale);
             int shrankenHeight = (int)Math.Floor((float)height * scale);
+            if (shrankenWidth == 0 || shrankenHeight == 0)
+                return null;
+
             Bitmap bmpShranken = new Bitmap(shrankenWidth, shrankenHeight);
 
             using (var graph = Graphics.FromImage(bmpShranken))
