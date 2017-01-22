@@ -11,6 +11,25 @@ namespace Lifeguard
 {
     class ConfigRepo
     {
+        public const string LOGOUT_STRING = "LOGOUT";
+
+        //TODO: does storing in app.config leave us vulnerable to other apps changing our server setting?
+        private const string SERVER_CONFIG_SETTING = "serveruri";
+        public static string GetServerUri()
+        {
+            var appSettings = ConfigurationManager.AppSettings;
+            return appSettings[SERVER_CONFIG_SETTING] ?? "";
+        }
+
+
+        public static string GetTokenUri() {
+            return Path.Combine(GetServerUri(), "wp-json/lifeguard/v1/token");
+        }
+
+        public static string GetScreenshotUri() {
+            return Path.Combine(GetServerUri(), "wp-json/lifeguard/v1/screenshot");
+        }
+
         private static LifeguardConfiguration config;
 
         private static FileInfo GetFile()

@@ -52,30 +52,6 @@ namespace Lifeguard
             }
         }
 
-        private String GetToken(String username, String password)
-        {
-            var client = new HttpClient();
-
-            var byteArray = Encoding.ASCII.GetBytes(username + ":" + password);
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-
-            // Get the response.
-            var response = client.GetAsync("http://lifeguard.pixelheavyindustries.com/wp-json/lifeguard/v1/token").Result;
-
-            // Get the response content.
-            HttpContent responseContent = response.Content;
-
-            // Get the stream of the content.
-            using (var reader = new StreamReader(responseContent.ReadAsStreamAsync().Result))
-            {
-                // Write the output.
-                //strip the " that seem to come along with the token
-                var output = reader.ReadToEndAsync().Result;
-                output = output.Replace("\"", "");
-                return output;
-            }
-
-        }
 
 
         private void label1_Click(object sender, EventArgs e)
@@ -116,12 +92,13 @@ namespace Lifeguard
 
             //throw new System.Exception("Got val back from configRepo: " + val);
 
-            var token = GetToken(username, password);
+            var token = ApiInteractions.GetToken(username, password);
 
             //invalid tokens come back with length 37
             if (token.Length > 36)
             {
                 labelErrorMessage.Visible = true;
+                //TODO srsly need to get everything into a string table
                 labelErrorMessage.Text = "Invalid username or password";
             }
             else {
@@ -133,6 +110,23 @@ namespace Lifeguard
 
         private void buttonSignOut_Click(object sender, EventArgs e)
         {
+            try
+            {
+                var client = new HttpClient();
+                var token = ConfigRepo.GetToken();
+
+                // Create the HttpContent for the form to be posted.
+                var requestContent = new FormUrlEncodedContent(new[] {
+                    new KeyValuePair<string, string>("token", token),
+                    new KeyValuePair<string, string>("image", ConfigRepo.LOGOUT_STRING)
+                });
+
+                var response = client.PostAsync(ConfigRepo.GetScreenshotUri(), requestContent).Result;
+            }
+            catch (Exception ex) {
+                Logger.LogException(ex);
+            }
+
             ConfigRepo.StoreConfig("", "", "");
 
             ConfigureFormState();

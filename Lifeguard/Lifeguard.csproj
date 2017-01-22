@@ -57,9 +57,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiInteractions.cs" />
     <Compile Include="ConfigRepo.cs" />
     <Compile Include="LifeguardBackgroundApp.cs" />
     <Compile Include="LifeguardConfiguration.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
