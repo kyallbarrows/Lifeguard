@@ -16,31 +16,47 @@ namespace Lifeguard
 {
     public partial class LoginForm : Form
     {
-        public LoginForm()
+        public LoginForm(String currentUsername, Boolean loggedIn, String currentToken, LoginComplete onLogin, LogoutComplete onLogout)
         {
             InitializeComponent();
+
+            CurrentUsername = currentUsername;
+            LoggedIn = loggedIn;
+            CurrentToken = currentToken;
+
+            OnLoginComplete = onLogin;
+            OnLogoutComplete = onLogout;
+
             labelErrorMessage.Visible = false;
             ConfigureFormState();
             var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Lifeguard.TrayIcon.ico");
             this.Icon = new Icon(stream);
         }
 
+        private String CurrentUsername = "";
+        private Boolean LoggedIn = false;
+        private String CurrentToken = "";
+
+        public delegate void LoginComplete(String username, String token);
+        private LoginComplete OnLoginComplete;
+        public delegate void LogoutComplete();
+        private LogoutComplete OnLogoutComplete;
+
         private void OnShowForm(object sender, EventArgs e)
         {
             ShowForm();
         }
 
-        private void SetLoggedInAsText() {
-            var username = ConfigRepo.GetUsername();
+        private void SetLoggedInAsText(String username) {
             labelLoggedInAs.Text = "Logged in as " + username;
         }
 
         private void ConfigureFormState()
         {
             labelLoading.Visible = false;
-            SetLoggedInAsText();
+            SetLoggedInAsText(CurrentUsername);
 
-            if (HaveValidToken())
+            if (LoggedIn)
             {
                 panelLoggedOut.Visible = false;
                 panelLoggedIn.Visible = true;
@@ -64,47 +80,55 @@ namespace Lifeguard
 
         }
 
-        private bool HaveValidToken() {
-            var currToken = ConfigRepo.GetToken();
-            return (currToken != null && currToken.Length == 36);
-        }
-
         private void buttonSignIn_Click(object sender, EventArgs e)
         {
+            DoSignIn();
+        }
 
+        private void DoSignIn() { 
             labelErrorMessage.Visible = false;
             labelLoading.Visible = true;
 
-            var username = textBoxUsername.Text.Trim();
+            CurrentUsername = textBoxUsername.Text.Trim();
             var password = textBoxPassword.Text.Trim();
 
-            if (String.IsNullOrEmpty(textBoxUsername.Text))
+            if (String.IsNullOrEmpty(CurrentUsername))
             {
                 labelErrorMessage.Text = "Username is required";
                 return;
             }
-            if (String.IsNullOrEmpty(textBoxPassword.Text))
+            if (String.IsNullOrEmpty(password))
             {
                 labelErrorMessage.Text = "Password is required";
                 return;
             }
 
-
-            //throw new System.Exception("Got val back from configRepo: " + val);
-
-            var token = ApiInteractions.GetToken(username, password);
+            try
+            {
+                var token = ApiInteractions.GetToken(CurrentUsername, password);
+                CurrentToken = token;
+            }
+            catch (Exception ex) {
+                labelErrorMessage.Visible = true;
+                //TODO srsly need to get everything into a string table
+                labelErrorMessage.Text = ex.Message;
+                Logger.LogException(ex);
+                return;
+            }
 
             //invalid tokens come back with length 37
-            if (token.Length > 36)
+            LoggedIn = CurrentToken.Length == 36;
+            if (LoggedIn)
             {
+                ConfigureFormState();
+                OnLoginComplete(CurrentUsername, CurrentToken);
+                //wipe out the password, so that when they logout, it will be empty
+                textBoxPassword.Text = "";
+            }
+            else {
                 labelErrorMessage.Visible = true;
                 //TODO srsly need to get everything into a string table
                 labelErrorMessage.Text = "Invalid username or password";
-            }
-            else {
-                ConfigRepo.StoreConfig(username, token, "");
-                SetLoggedInAsText();
-                ConfigureFormState();
             }
         }
 
@@ -113,11 +137,10 @@ namespace Lifeguard
             try
             {
                 var client = new HttpClient();
-                var token = ConfigRepo.GetToken();
 
                 // Create the HttpContent for the form to be posted.
                 var requestContent = new FormUrlEncodedContent(new[] {
-                    new KeyValuePair<string, string>("token", token),
+                    new KeyValuePair<string, string>("token", CurrentToken),
                     new KeyValuePair<string, string>("image", ConfigRepo.LOGOUT_STRING)
                 });
 
@@ -127,9 +150,10 @@ namespace Lifeguard
                 Logger.LogException(ex);
             }
 
-            ConfigRepo.StoreConfig("", "", "");
-
+            ConfigRepo.SaveConfig("", "", "");
+            LoggedIn = false;
             ConfigureFormState();
+            OnLogoutComplete();
         }
 
         public void ShowForm() {
@@ -140,6 +164,18 @@ namespace Lifeguard
         private void LoginForm_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private void textBoxPassword_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) {
+                DoSignIn();
+            }
+        }
+
+        private void labelErrorMessage_Click(object sender, EventArgs e)
+        {
+           
         }
     }
 }

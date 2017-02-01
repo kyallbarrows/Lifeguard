@@ -60,6 +60,7 @@
             this.textBoxPassword.PasswordChar = '●';
             this.textBoxPassword.Size = new System.Drawing.Size(179, 27);
             this.textBoxPassword.TabIndex = 1;
+            this.textBoxPassword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBoxPassword_KeyDown);
             // 
             // label1
             // 
@@ -118,19 +119,21 @@
             // 
             this.labelErrorMessage.AutoSize = true;
             this.labelErrorMessage.ForeColor = System.Drawing.Color.DarkRed;
-            this.labelErrorMessage.Location = new System.Drawing.Point(111, 12);
+            this.labelErrorMessage.Location = new System.Drawing.Point(14, 10);
             this.labelErrorMessage.Name = "labelErrorMessage";
-            this.labelErrorMessage.Size = new System.Drawing.Size(104, 13);
+            this.labelErrorMessage.Size = new System.Drawing.Size(576, 13);
             this.labelErrorMessage.TabIndex = 7;
-            this.labelErrorMessage.Text = "username is required";
+            this.labelErrorMessage.Text = "Username is required and stuff should go here fdafdafdsafdsafdsafdsafdsafdsafdsaf" +
+    "dsafdsafdsafdsafdsafdsafdsafdsafdsa";
+            this.labelErrorMessage.Click += new System.EventHandler(this.labelErrorMessage_Click);
             // 
             // panelLoggedIn
             // 
             this.panelLoggedIn.Controls.Add(this.buttonSignOut);
             this.panelLoggedIn.Controls.Add(this.labelLoggedInAs);
-            this.panelLoggedIn.Location = new System.Drawing.Point(12, 226);
+            this.panelLoggedIn.Location = new System.Drawing.Point(10, 10);
             this.panelLoggedIn.Name = "panelLoggedIn";
-            this.panelLoggedIn.Size = new System.Drawing.Size(308, 208);
+            this.panelLoggedIn.Size = new System.Drawing.Size(308, 207);
             this.panelLoggedIn.TabIndex = 8;
             // 
             // buttonSignOut
@@ -173,11 +176,11 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(349, 447);
+            this.ClientSize = new System.Drawing.Size(349, 232);
             this.Controls.Add(this.panelLoggedOut);
             this.Controls.Add(this.panelLoggedIn);
             this.Name = "LoginForm";
-            this.Text = "Login";
+            this.Text = "Login to Lifeguard";
             this.Load += new System.EventHandler(this.LoginForm_Load);
             this.panelLoggedIn.ResumeLayout(false);
             this.panelLoggedIn.PerformLayout();

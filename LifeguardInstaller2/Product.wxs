@@ -10,7 +10,7 @@
     
     <Property Id="ASSISTANCE_START_VIA_REGISTRY">1</Property>
     <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
-    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Please Restart your Computer." />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Please restart your computer.  Lifeguard wil start and allow you to login after rebooting." />
     <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
     <Property Id="WIXUI_INSTALLDIR" Value="TARGETDIR" />
     <Property Id="WixUI_Mode" Value="Custom" />
@@ -57,14 +57,23 @@
       <Component Id="ForegroundComponent">
         <File Source="$(var.Lifeguard.TargetPath)" />
       </Component>
+      <Component Id="ForegroundAppConfig">
+        <File Source="$(var.Lifeguard.TargetDir)LifeguardBackgroundApp.exe.config" />
+      </Component>
       <Component Id="RestarterComponent">
         <File Source="$(var.LifeguardRestarter.TargetPath)" />
+      </Component>
+      <Component Id="Log4Net">
+        <File Source="$(var.Lifeguard.TargetDir)log4net.dll" />
+      </Component>
+      <Component Id="Json">
+        <File Source="$(var.Lifeguard.TargetDir)Newtonsoft.Json.dll" />
       </Component>
       <Component>
         <RegistryValue Id="MerAs.rst" Root="HKMU" Action="write"
                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
                       Name="LifeguardAccountability"
-                      Value="[INSTALLFOLDER]LifeguardRestarter.exe"
+                      Value="[INSTALLFOLDER]LifeguardBackgroundApp.exe"
                       Type="string" />        
       </Component>
     </ComponentGroup>

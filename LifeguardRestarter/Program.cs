@@ -16,6 +16,8 @@ namespace Lifeguard
         private static String LifeguardMainMutexGuid = "C7FCF167-4792-4FAF-ACBF-D9F0BB3356F9";
         private static String lifeguardAppName = "LifeguardBackgroundApp.exe";
 
+        private const int MS_BETWEEN_CHECKS = 300000;   //5 minutes
+
         static void Main(string[] args)
         {
             new Program().Start();

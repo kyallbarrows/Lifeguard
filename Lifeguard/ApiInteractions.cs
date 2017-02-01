@@ -18,7 +18,7 @@ namespace Lifeguard
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
 
             // Get the response.
-            var uri = Path.Combine(ConfigRepo.GetServerUri(), "wp-json/lifeguard/v1/token");
+            var uri = ConfigRepo.GetTokenUri();
             try
             {
                 var response = client.GetAsync(uri).Result;
@@ -50,7 +50,8 @@ namespace Lifeguard
             catch (Exception e)
             {
                 Logger.LogException(e);
-                return "";
+                //and pass it up
+                throw;
             }
         }
     }

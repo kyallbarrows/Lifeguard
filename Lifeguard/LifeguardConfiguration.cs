@@ -9,11 +9,9 @@ namespace Lifeguard
 {
     class LifeguardConfiguration
     {
-        public string Username;
-        public string Token;
-        public string MachineID;
-
-
+        public string Username = "";
+        public string Token = "";
+        public string MachineID = "";
     }
 
 }

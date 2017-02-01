@@ -1,17 +1,21 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Lifeguard
 {
     class ConfigRepo
     {
         public const string LOGOUT_STRING = "LOGOUT";
+        private static object LockObject;
+        private static object GetLockObject()
+        {
+            if (LockObject == null)
+                LockObject = new object();
+
+            return LockObject;
+        }
 
         //TODO: does storing in app.config leave us vulnerable to other apps changing our server setting?
         private const string SERVER_CONFIG_SETTING = "serveruri";
@@ -22,106 +26,86 @@ namespace Lifeguard
         }
 
 
-        public static string GetTokenUri() {
-            return Path.Combine(GetServerUri(), "wp-json/lifeguard/v1/token");
-        }
-
-        public static string GetScreenshotUri() {
-            return Path.Combine(GetServerUri(), "wp-json/lifeguard/v1/screenshot");
-        }
-
-        private static LifeguardConfiguration config;
-
-        private static FileInfo GetFile()
+        public static string GetTokenUri()
         {
-            var path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "phlg",
-                "i.cfg");
-
-            Console.WriteLine("Encryption Key File: " + path);
-
-            var file = new FileInfo(path);
-            if (!file.Directory.Exists)
-                file.Directory.Create();
-
-            return file;
+            return GetServerUri() + "/wp-json/lifeguard/v1/token";
         }
 
-        private static void LoadConfig() {
-            var file = GetFile();
-            if (file.Exists)
+        public static string GetScreenshotUri()
+        {
+            return GetServerUri() + "/wp-json/lifeguard/v1/screenshot";
+        }
+
+        private static String GetConfigPath()
+        {
+            return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "phlg",
+                    "i.cfg");
+        }
+
+        public static LifeguardConfiguration GetConfig()
+        {
+            lock (GetLockObject())
             {
-                string contents = File.ReadAllText(file.FullName);
+                var path = GetConfigPath();
+                Console.WriteLine("Encryption Key File: " + path);
+
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Exists)
+                {
+                    try
+                    {
+                        string contents = File.ReadAllText(fileInfo.FullName);
+                        return JsonConvert.DeserializeObject<LifeguardConfiguration>(contents) ?? new LifeguardConfiguration();
+                    }
+                    catch (JsonException je)
+                    {
+                        //config got corrupted somehow, create a new blank one
+                        return new LifeguardConfiguration();
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogException(e);
+                    }
+                }
+            }
+
+            return new LifeguardConfiguration();
+        }
+
+
+        public static void SaveConfig(string username, string token, string machineID)
+        {
+            var newConfig = new LifeguardConfiguration { Username = username, Token = token, MachineID = machineID };
+            SaveConfig(newConfig);
+        }
+
+        public static void SaveConfig(LifeguardConfiguration config)
+        {
+            FileInfo fileInfo;
+
+            lock (GetLockObject())
+            {
+                var path = GetConfigPath();
+
+                fileInfo = new FileInfo(path);
+                if (!fileInfo.Directory.Exists)
+                {
+                    fileInfo.Directory.Create();
+                }
+
                 try
                 {
-                    //TODO: decrypt the encrypted stuff
-                    config = JsonConvert.DeserializeObject<LifeguardConfiguration>(contents);
+                    string jsonConfig = JsonConvert.SerializeObject(config);
+                    File.WriteAllText(fileInfo.FullName, jsonConfig);
                 }
-                catch (JsonException je) {
-                    //config got corrupted somehow, create a new blank one
-                    config = new LifeguardConfiguration();
+                catch (Exception e)
+                {
+                    Logger.LogException(e);
                 }
             }
         }
 
-        public static string GetUsername() {
-            if (config == null)
-                LoadConfig();
-            return config.Username;
-        }
-
-        public static string GetToken()
-        {
-            if (config == null)
-                LoadConfig();
-            return config.Token;
-        }
-
-        public static string GetMachineID() {
-            if (config == null)
-                LoadConfig();
-            return config.MachineID;
-        }
-
-        public static void StoreConfig(string username, string token, string machineID)
-        {
-            var newConfig = new LifeguardConfiguration { Username = username, Token = token, MachineID = machineID };
-            string jsonConfig = JsonConvert.SerializeObject(newConfig);
-            var file = GetFile();
-            File.WriteAllText(file.FullName, jsonConfig);
-        }
-
-        /*        private static byte[] GetEncryptionKey()
-                {
-
-                    // determine if current user of machine
-                    // or any user of machine can decrypt the key
-                    var scope = DataProtectionScope.CurrentUser;
-
-                    // make it a bit tougher to decrypt 
-                    var entropy = Encoding.UTF8.GetBytes("correct horse battery staple :)");
-
-                    if (file.Exists)
-                    {
-                        return ProtectedData.Unprotect(
-                            File.ReadAllBytes(path), entropy, scope);
-                    }
-
-                    // generate key
-                    byte[] key = new byte[1024];
-                    using (var rng = RNGCryptoServiceProvider.Create())
-                    {
-                        rng.GetBytes(key);
-                    }
-                    // encrypt the key
-                    var encrypted = ProtectedData.Protect(key, entropy, scope);
-
-                    // save for later use   
-                    File.WriteAllBytes(path, encrypted);
-
-                    return key;
-                }*/
     }
-
 }

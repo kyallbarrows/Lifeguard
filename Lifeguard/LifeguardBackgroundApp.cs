@@ -26,12 +26,18 @@ namespace Lifeguard
         //TODO: these might be different between free and paid accounts, to save on hosting costs
         private const int MIN_DELAY = 8 * 60 * 1000;
         private const int MAX_DELAY = 11 * 60 * 1000;
+        private const int CORRECT_TOKEN_LENGTH = 36;
+        private const int ERROR_TOKEN_LENGTH = 37;
 
         //TODO: just look for quotes and move all the strings to a string table
         private static String LifeguardMainMutexGuid = "C7FCF167-4792-4FAF-ACBF-D9F0BB3356F9";
 
+
         private NotifyIcon trayIcon;
         private ContextMenu trayMenu;
+
+        private Boolean RunMainLoop = false;
+        private LifeguardConfiguration Config;
 
         private static readonly log4net.ILog log =
                     log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -71,111 +77,95 @@ namespace Lifeguard
                 Logger.LogException(e);
             }
 
-            // unique id for global mutex - Global prefix means it is global to the machine
-            string mutexId = string.Format("Global\\{{{0}}}", LifeguardMainMutexGuid);
 
-            // Need a place to store a return value in Mutex() constructor call
-            bool createdNew;
+            Application.EnableVisualStyles();
 
-            // edited by Jeremy Wiebe to add example of setting up security for multi-user usage
-            // edited by 'Marc' to work also on localized systems (don't use just "Everyone") 
-            var allowEveryoneRule = new MutexAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), MutexRights.FullControl, AccessControlType.Allow);
-            var securitySettings = new MutexSecurity();
-            securitySettings.AddAccessRule(allowEveryoneRule);
+            CreateTrayIcon();
 
-            //TODO: move the mutex stuff to somewhere common, pass in a task or something as the main operation
-            // edited by MasonGZhwiti to prevent race condition on security settings via VanNguyen
-            using (var mutex = new Mutex(false, mutexId, out createdNew, securitySettings))
+            //check if logged in
+            Config = ConfigRepo.GetConfig();
+            if (String.IsNullOrEmpty(Config.Token))
             {
-                // edited by acidzombie24
-                var hasHandle = false;
-                try
+                //  if not, pop login box
+                ShowLoginForm();
+            }
+            else {
+                RunMainLoop = true;
+            }
+
+            DoScreenshotLoop();
+        }
+
+
+        private void DoScreenshotLoop() {
+            var r = new Random((int)DateTime.UtcNow.Ticks);
+
+            //RunMainLoop may get set to false by a logout
+            while (true)
+            {
+                if (RunMainLoop && !String.IsNullOrEmpty(Config.Token))
                 {
                     try
                     {
-                        // note, you may want to time out here instead of waiting forever
-                        // edited by acidzombie24
-                        // mutex.WaitOne(Timeout.Infinite, false);
-                        hasHandle = mutex.WaitOne(5000, false);
-                        if (hasHandle == false)
-                            throw new TimeoutException("Timeout waiting for exclusive access");
-                    }
-                    catch (AbandonedMutexException)
-                    {
-                        // Log the fact that the mutex was abandoned in another process, it will still get acquired
-                        hasHandle = true;
-                    }
-
-                    Application.EnableVisualStyles();
-
-                    Task.Run(() =>
-                    {
-                        try
+                        //capture screenshot to temp folder
+                        using (Bitmap newImage = CaptureScreenshot())
                         {
-                            trayMenu = new ContextMenu();
-                            trayMenu.MenuItems.Add("Lifeguard", OnShowForm);
-
-                            trayIcon = new NotifyIcon();
-                            trayIcon.Text = "Lifeguard Accountability";
-
-                            string[] resourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
-
-                            var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Lifeguard.TrayIcon.ico");
-                            trayIcon.Icon = new Icon(stream);
-                            trayIcon.Click += new System.EventHandler(OnShowForm);
-
-                            // Add menu to tray icon and show it.
-                            trayIcon.ContextMenu = trayMenu;
-                            trayIcon.Visible = true;
-                            Application.Run();
+                            if (newImage != null)
+                                PostScreenshot(newImage, Config.Token);
                         }
-                        catch (Exception e) {
-                            Logger.LogException(e);
-                        }
-                    });
 
-                    //TODO: some way to shut this thing off
-                    while (true)
-                    {
-                        try
-                        {
-                            var token = ConfigRepo.GetToken();
-                            if (!string.IsNullOrEmpty(token) && token.Length == 36)
-                            {
-                                //capture screenshot to temp folder
-                                using (Bitmap newImage = CaptureScreenshot())
-                                {
-                                    if (newImage != null)
-                                        PostScreenshot(newImage, token);
-                                }
-                            }
-
-                            //wait between MIN_DELAY and MAX_DELAY milliseconds
-                            var r = new Random((int)DateTime.UtcNow.Ticks);
-                            Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
-                        }
-                        catch (Exception e) {
-                            Logger.LogException(e);
-                        }
+                        //wait between MIN_DELAY and MAX_DELAY milliseconds
+                        Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
                     }
-
-                }
-                finally
-                {
-                    // edited by acidzombie24, added if statement
-                    if (hasHandle)
-                        mutex.ReleaseMutex();
+                    catch (Exception e)
+                    {
+                        Logger.LogException(e);
+                        Thread.Sleep(r.Next(MIN_DELAY, MAX_DELAY));
+                    }
                 }
             }
+        }
 
+        private void CreateTrayIcon() {
+            Task.Run(() =>
+            {
+                try
+                {
+                    trayMenu = new ContextMenu();
+                    trayMenu.MenuItems.Add("Lifeguard", OnShowForm);
+
+                    trayIcon = new NotifyIcon();
+                    trayIcon.Text = "Lifeguard Accountability";
+
+                    string[] resourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+
+                    var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Lifeguard.TrayIcon.ico");
+                    trayIcon.Icon = new Icon(stream);
+                    trayIcon.Click += new System.EventHandler(OnShowForm);
+
+                    // Add menu to tray icon and show it.
+                    trayIcon.ContextMenu = trayMenu;
+                    trayIcon.Visible = true;
+                    Application.Run();
+                }
+                catch (Exception e)
+                {
+                    Logger.LogException(e);
+                }
+            });
         }
 
         private void OnShowForm(object sender, EventArgs e)
         {
+            ShowLoginForm();
+        }
+
+        private void ShowLoginForm() { 
             Task.Run(() => {
                 try
                 {
-                    var loginForm = new LoginForm();
+                    var loggedIn = !String.IsNullOrEmpty(Config.Token);
+                    var loginForm = new LoginForm(Config.Username, loggedIn, Config.Token, LoginHappened, LogoutHappened);
                     Application.Run(loginForm);
                 }
                 catch (Exception ex) {
@@ -184,6 +174,19 @@ namespace Lifeguard
             });
         }
 
+        protected void LoginHappened(String username, String token) {
+            Config.Username = username;
+            Config.Token = token;
+            ConfigRepo.SaveConfig(Config);
+            RunMainLoop = true;
+        }
+
+        protected void LogoutHappened() {
+            RunMainLoop = false;
+            Config.Token = "";
+            ConfigRepo.SaveConfig(Config);
+            RunMainLoop = false;           
+        }
 
         protected void PostScreenshot(Bitmap screenshot, string token) {
             var client = new HttpClient();
@@ -272,12 +275,13 @@ namespace Lifeguard
                                                      CopyPixelOperation.SourceCopy);
 
                                     float screenShrankenWidth = scale * bmpScreenCapture.Width;
+                                    float screenShrankenHeight = scale * bmpScreenCapture.Height;
                                     graph.DrawImage(bmpScreenCapture,
                                                     new Rectangle(
                                                         (int)Math.Floor(x),
                                                         0,
                                                         (int)Math.Floor(screenShrankenWidth),
-                                                        (int)Math.Floor(scale * shrankenHeight))
+                                                        (int)Math.Floor(screenShrankenHeight))
                                                     );
                                     x += screenShrankenWidth;
                                 }
