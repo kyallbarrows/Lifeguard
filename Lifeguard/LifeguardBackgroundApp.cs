@@ -15,6 +15,7 @@ using System.Security.AccessControl;    //MutexAccessRule
 using System.Security.Principal;        //SecurityIdentifier
 using System.Threading.Tasks;
 using System.Reflection;
+using System.Security.Cryptography;
 
 namespace Lifeguard
 {
@@ -23,9 +24,10 @@ namespace Lifeguard
         [DllImport("user32.dll")]
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+
         //TODO: these might be different between free and paid accounts, to save on hosting costs
-        private const int MIN_DELAY = 8 * 60 * 1000;
-        private const int MAX_DELAY = 11 * 60 * 1000;
+        private const int MIN_DELAY = 1 * 60 * 1000;
+        private const int MAX_DELAY = 2 * 60 * 1000;
         private const int CORRECT_TOKEN_LENGTH = 36;
         private const int ERROR_TOKEN_LENGTH = 37;
 
@@ -38,6 +40,7 @@ namespace Lifeguard
 
         private Boolean RunMainLoop = false;
         private LifeguardConfiguration Config;
+        private String LastHash = "";
 
         private static readonly log4net.ILog log =
                     log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -197,8 +200,21 @@ namespace Lifeguard
             {
                 screenshot.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
                 byte[] imageBytes = stream.ToArray();
-                string base64String = Convert.ToBase64String(imageBytes);
+                string newHash = "";
 
+                using (SHA1CryptoServiceProvider sha1 = new SHA1CryptoServiceProvider())
+                {
+                    newHash = Convert.ToBase64String(sha1.ComputeHash(imageBytes));
+                }
+
+                if (newHash == LastHash) {
+                    //images are identical, no need to post a screenshot
+                    return;
+                }
+
+                LastHash = newHash;
+
+                string base64String = Convert.ToBase64String(imageBytes);
                 // Create the HttpContent for the form to be posted.
                 var requestContent = new FormUrlEncodedContent(new[] {
                     new KeyValuePair<string, string>("token", token),
