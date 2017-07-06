@@ -38,7 +38,7 @@ namespace Lifeguard
         private NotifyIcon trayIcon;
         private ContextMenu trayMenu;
 
-        private Boolean RunMainLoop = false;
+        private Boolean PostScreenshots = false;
         private LifeguardConfiguration Config;
         private String LastHash = "";
         private Bitmap LastBitmap = null;
@@ -94,7 +94,7 @@ namespace Lifeguard
                 ShowLoginForm();
             }
             else {
-                RunMainLoop = true;
+                PostScreenshots = true;
             }
 
             DoScreenshotLoop();
@@ -107,7 +107,7 @@ namespace Lifeguard
             //RunMainLoop may get set to false by a logout
             while (true)
             {
-                if (RunMainLoop && !String.IsNullOrEmpty(Config.Token))
+                if (PostScreenshots && !String.IsNullOrEmpty(Config.Token))
                 {
                     try
                     {
@@ -169,7 +169,7 @@ namespace Lifeguard
                 try
                 {
                     var loggedIn = !String.IsNullOrEmpty(Config.Token);
-                    var loginForm = new LoginForm(Config.Username, loggedIn, Config.Token, LoginHappened, LogoutHappened);
+                    var loginForm = new LoginForm(Config.Username, loggedIn, Config.Token, LoginHappened, LogoutHappened, ShutdownRequested);
                     Application.Run(loginForm);
                 }
                 catch (Exception ex) {
@@ -182,14 +182,19 @@ namespace Lifeguard
             Config.Username = username;
             Config.Token = token;
             ConfigRepo.SaveConfig(Config);
-            RunMainLoop = true;
+            PostScreenshots = true;
         }
 
         protected void LogoutHappened() {
-            RunMainLoop = false;
+            PostScreenshots = false;
             Config.Token = "";
             ConfigRepo.SaveConfig(Config);
-            RunMainLoop = false;           
+            PostScreenshots = false;           
+        }
+
+        protected void ShutdownRequested()
+        {
+            Application.Exit();
         }
 
         protected void PostScreenshot(Bitmap screenshot, string token, string machineId) {

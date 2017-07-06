@@ -17,7 +17,7 @@ namespace Lifeguard
 {
     public partial class LoginForm : Form
     {
-        public LoginForm(String currentUsername, Boolean loggedIn, String currentToken, LoginComplete onLogin, LogoutComplete onLogout)
+        public LoginForm(String currentUsername, Boolean loggedIn, String currentToken, LoginComplete onLogin, LogoutComplete onLogout, ShutdownApplication onShutdown)
         {
             InitializeComponent();
 
@@ -27,6 +27,7 @@ namespace Lifeguard
 
             OnLoginComplete = onLogin;
             OnLogoutComplete = onLogout;
+            OnShutdownApplication = onShutdown;
 
             labelErrorMessage.Visible = false;
             ConfigureFormState();
@@ -42,6 +43,8 @@ namespace Lifeguard
         private LoginComplete OnLoginComplete;
         public delegate void LogoutComplete();
         private LogoutComplete OnLogoutComplete;
+        public delegate void ShutdownApplication();
+        private ShutdownApplication OnShutdownApplication;
 
         private void OnShowForm(object sender, EventArgs e)
         {
@@ -170,7 +173,7 @@ namespace Lifeguard
         private void menuItemShutDownClick(object sender, EventArgs e)
         {
             sendLogoutNotification(ConfigRepo.SHUTDOWN_STRING);
-            Application.Exit();
+            OnShutdownApplication();
         }
 
         public void ShowForm() {

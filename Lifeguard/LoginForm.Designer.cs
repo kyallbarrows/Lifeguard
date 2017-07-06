@@ -133,8 +133,6 @@
             // 
             // panelLoggedIn
             // 
-            this.panelLoggedIn.Controls.Add(this.panelLoggedOut);
-            this.panelLoggedIn.Controls.Add(this.buttonSignOut);
             this.panelLoggedIn.Controls.Add(this.labelLoggedInAs);
             this.panelLoggedIn.Location = new System.Drawing.Point(12, 35);
             this.panelLoggedIn.Name = "panelLoggedIn";
@@ -151,7 +149,7 @@
             this.panelLoggedOut.Controls.Add(this.label1);
             this.panelLoggedOut.Controls.Add(this.linkLabelForgotPassword);
             this.panelLoggedOut.Controls.Add(this.label2);
-            this.panelLoggedOut.Location = new System.Drawing.Point(0, 17);
+            this.panelLoggedOut.Location = new System.Drawing.Point(12, 35);
             this.panelLoggedOut.Name = "panelLoggedOut";
             this.panelLoggedOut.Size = new System.Drawing.Size(309, 190);
             this.panelLoggedOut.TabIndex = 9;
@@ -183,7 +181,7 @@
             this.exitToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(349, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(359, 24);
             this.menuStrip1.TabIndex = 10;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -206,8 +204,9 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(349, 232);
+            this.ClientSize = new System.Drawing.Size(359, 263);
             this.Controls.Add(this.panelLoggedIn);
+            this.Controls.Add(this.panelLoggedOut);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "LoginForm";
