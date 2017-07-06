@@ -37,11 +37,15 @@
             this.buttonSignIn = new System.Windows.Forms.Button();
             this.labelErrorMessage = new System.Windows.Forms.Label();
             this.panelLoggedIn = new System.Windows.Forms.Panel();
-            this.buttonSignOut = new System.Windows.Forms.Button();
             this.panelLoggedOut = new System.Windows.Forms.Panel();
             this.labelLoading = new System.Windows.Forms.Label();
+            this.buttonSignOut = new System.Windows.Forms.Button();
+            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.shutDownLifeguardToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.panelLoggedIn.SuspendLayout();
             this.panelLoggedOut.SuspendLayout();
+            this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // textBoxUsername
@@ -129,23 +133,13 @@
             // 
             // panelLoggedIn
             // 
+            this.panelLoggedIn.Controls.Add(this.panelLoggedOut);
             this.panelLoggedIn.Controls.Add(this.buttonSignOut);
             this.panelLoggedIn.Controls.Add(this.labelLoggedInAs);
-            this.panelLoggedIn.Location = new System.Drawing.Point(10, 10);
+            this.panelLoggedIn.Location = new System.Drawing.Point(12, 35);
             this.panelLoggedIn.Name = "panelLoggedIn";
-            this.panelLoggedIn.Size = new System.Drawing.Size(308, 207);
+            this.panelLoggedIn.Size = new System.Drawing.Size(308, 185);
             this.panelLoggedIn.TabIndex = 8;
-            // 
-            // buttonSignOut
-            // 
-            this.buttonSignOut.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.25F);
-            this.buttonSignOut.Location = new System.Drawing.Point(18, 59);
-            this.buttonSignOut.Name = "buttonSignOut";
-            this.buttonSignOut.Size = new System.Drawing.Size(115, 32);
-            this.buttonSignOut.TabIndex = 9;
-            this.buttonSignOut.Text = "Sign Out";
-            this.buttonSignOut.UseVisualStyleBackColor = true;
-            this.buttonSignOut.Click += new System.EventHandler(this.buttonSignOut_Click);
             // 
             // panelLoggedOut
             // 
@@ -157,9 +151,9 @@
             this.panelLoggedOut.Controls.Add(this.label1);
             this.panelLoggedOut.Controls.Add(this.linkLabelForgotPassword);
             this.panelLoggedOut.Controls.Add(this.label2);
-            this.panelLoggedOut.Location = new System.Drawing.Point(12, 12);
+            this.panelLoggedOut.Location = new System.Drawing.Point(0, 17);
             this.panelLoggedOut.Name = "panelLoggedOut";
-            this.panelLoggedOut.Size = new System.Drawing.Size(309, 208);
+            this.panelLoggedOut.Size = new System.Drawing.Size(309, 190);
             this.panelLoggedOut.TabIndex = 9;
             // 
             // labelLoading
@@ -172,13 +166,50 @@
             this.labelLoading.TabIndex = 10;
             this.labelLoading.Text = "Loading...";
             // 
+            // buttonSignOut
+            // 
+            this.buttonSignOut.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.25F);
+            this.buttonSignOut.Location = new System.Drawing.Point(18, 59);
+            this.buttonSignOut.Name = "buttonSignOut";
+            this.buttonSignOut.Size = new System.Drawing.Size(115, 32);
+            this.buttonSignOut.TabIndex = 9;
+            this.buttonSignOut.Text = "Sign Out";
+            this.buttonSignOut.UseVisualStyleBackColor = true;
+            this.buttonSignOut.Click += new System.EventHandler(this.buttonSignOut_Click);
+            // 
+            // menuStrip1
+            // 
+            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.exitToolStripMenuItem});
+            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+            this.menuStrip1.Name = "menuStrip1";
+            this.menuStrip1.Size = new System.Drawing.Size(349, 24);
+            this.menuStrip1.TabIndex = 10;
+            this.menuStrip1.Text = "menuStrip1";
+            // 
+            // exitToolStripMenuItem
+            // 
+            this.exitToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.shutDownLifeguardToolStripMenuItem});
+            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
+            this.exitToolStripMenuItem.Text = "Exit";
+            // 
+            // shutDownLifeguardToolStripMenuItem
+            // 
+            this.shutDownLifeguardToolStripMenuItem.Name = "shutDownLifeguardToolStripMenuItem";
+            this.shutDownLifeguardToolStripMenuItem.Size = new System.Drawing.Size(185, 22);
+            this.shutDownLifeguardToolStripMenuItem.Text = "Shut Down Lifeguard";
+            this.shutDownLifeguardToolStripMenuItem.Click += new System.EventHandler(this.menuItemShutDownClick);
+            // 
             // LoginForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(349, 232);
-            this.Controls.Add(this.panelLoggedOut);
             this.Controls.Add(this.panelLoggedIn);
+            this.Controls.Add(this.menuStrip1);
+            this.MainMenuStrip = this.menuStrip1;
             this.Name = "LoginForm";
             this.Text = "Login to Lifeguard";
             this.Load += new System.EventHandler(this.LoginForm_Load);
@@ -186,7 +217,10 @@
             this.panelLoggedIn.PerformLayout();
             this.panelLoggedOut.ResumeLayout(false);
             this.panelLoggedOut.PerformLayout();
+            this.menuStrip1.ResumeLayout(false);
+            this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -204,5 +238,8 @@
         private System.Windows.Forms.Button buttonSignOut;
         private System.Windows.Forms.Panel panelLoggedOut;
         private System.Windows.Forms.Label labelLoading;
+        private System.Windows.Forms.MenuStrip menuStrip1;
+        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem shutDownLifeguardToolStripMenuItem;
     }
 }

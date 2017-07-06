@@ -16,6 +16,7 @@ using System.Security.Principal;        //SecurityIdentifier
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Net.Http.Headers;
 
 namespace Lifeguard
 {
@@ -26,10 +27,9 @@ namespace Lifeguard
 
 
         //TODO: these might be different between free and paid accounts, to save on hosting costs
-        private const int MIN_DELAY = 1 * 60 * 1000;
-        private const int MAX_DELAY = 2 * 60 * 1000;
-        private const int CORRECT_TOKEN_LENGTH = 36;
-        private const int ERROR_TOKEN_LENGTH = 37;
+        private const int MIN_DELAY = 6 * 60 * 1000;
+        private const int MAX_DELAY = 10 * 60 * 1000;
+        private const double MIN_DIFFERENCE = .05d;
 
         //TODO: just look for quotes and move all the strings to a string table
         private static String LifeguardMainMutexGuid = "C7FCF167-4792-4FAF-ACBF-D9F0BB3356F9";
@@ -41,6 +41,7 @@ namespace Lifeguard
         private Boolean RunMainLoop = false;
         private LifeguardConfiguration Config;
         private String LastHash = "";
+        private Bitmap LastBitmap = null;
 
         private static readonly log4net.ILog log =
                     log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -114,7 +115,7 @@ namespace Lifeguard
                         using (Bitmap newImage = CaptureScreenshot())
                         {
                             if (newImage != null)
-                                PostScreenshot(newImage, Config.Token);
+                                PostScreenshot(newImage, Config.Token, Config.MachineID);
                         }
 
                         //wait between MIN_DELAY and MAX_DELAY milliseconds
@@ -191,7 +192,7 @@ namespace Lifeguard
             RunMainLoop = false;           
         }
 
-        protected void PostScreenshot(Bitmap screenshot, string token) {
+        protected void PostScreenshot(Bitmap screenshot, string token, string machineId) {
             var client = new HttpClient();
 
             UTF8Encoding encoding = new UTF8Encoding();
@@ -214,13 +215,43 @@ namespace Lifeguard
 
                 LastHash = newHash;
 
+                //hashes didn't match, need to check pixels for percentage difference
+                //compare new and old images
+
+                //make sure we have a lastbitmap, and that user didn't change screen res on us
+                if (LastBitmap != null && LastBitmap.Width == screenshot.Width && LastBitmap.Height == screenshot.Height)
+                {
+                    int step = 4;
+                    double numDifferentPixels = 0;
+                    double diffRatio = 1f;
+                    double totalPixels = Math.Floor((double)screenshot.Width/(double)step) * Math.Floor((double)screenshot.Height / (double)step);
+                    for (int x = 0; x < screenshot.Width; x += step) {
+                        for (int y = 0; y < screenshot.Height; y += step)
+                        {
+                            totalPixels++;
+                            if (LastBitmap.GetPixel(x, y).GetHashCode() != screenshot.GetPixel(x, y).GetHashCode())
+                            {
+                                numDifferentPixels++;
+                            }
+                        }
+                    }
+
+                    if (totalPixels > 0 && (numDifferentPixels / totalPixels) < MIN_DIFFERENCE)
+                        return;
+                }
+
+                LastBitmap = screenshot;
+
                 string base64String = Convert.ToBase64String(imageBytes);
+                //base64String = "/9j/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/sABFEdWNreQABAAQAAAA8AAD/4QMxaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLwA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/PiA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJBZG9iZSBYTVAgQ29yZSA1LjYtYzEzOCA3OS4xNTk4MjQsIDIwMTYvMDkvMTQtMDE6MDk6MDEgICAgICAgICI+IDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+IDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE3IChNYWNpbnRvc2gpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkZFMzI4MkY5NTQ4QjExRTc5RENBRjI2NzNCOEJBMjYwIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkZFMzI4MkZBNTQ4QjExRTc5RENBRjI2NzNCOEJBMjYwIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6RkUzMjgyRjc1NDhCMTFFNzlEQ0FGMjY3M0I4QkEyNjAiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6RkUzMjgyRjg1NDhCMTFFNzlEQ0FGMjY3M0I4QkEyNjAiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7/7gAOQWRvYmUAZMAAAAAB/9sAhAAGBAQEBQQGBQUGCQYFBgkLCAYGCAsMCgoLCgoMEAwMDAwMDBAMDg8QDw4MExMUFBMTHBsbGxwfHx8fHx8fHx8fAQcHBw0MDRgQEBgaFREVGh8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx//wAARCAAIAAgDAREAAhEBAxEB/8QASgABAAAAAAAAAAAAAAAAAAAACAEBAAAAAAAAAAAAAAAAAAAAABABAAAAAAAAAAAAAAAAAAAAABEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVIP/2Q==";
                 // Create the HttpContent for the form to be posted.
                 var requestContent = new FormUrlEncodedContent(new[] {
-                    new KeyValuePair<string, string>("token", token),
-                    new KeyValuePair<string, string>("image", base64String)
+                    new KeyValuePair<string, string>("machineid", machineId),
+                    new KeyValuePair<string, string>("imagedata", base64String)
                 });
 
+                //                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Authorization", "Token " + token);
+                client.DefaultRequestHeaders.Add("Authorization", "Token " + token);
                 var response = client.PostAsync(ConfigRepo.GetScreenshotUri(), requestContent).Result;
 
                 // Get the response content.

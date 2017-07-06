@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,10 @@ using System.Threading.Tasks;
 
 namespace Lifeguard
 {
+    class Token {
+        public string token { get; set; }
+    }
+
     class ApiInteractions
     {
         public static string GetToken(string username, string password)
@@ -21,7 +26,14 @@ namespace Lifeguard
             var uri = ConfigRepo.GetTokenUri();
             try
             {
-                var response = client.GetAsync(uri).Result;
+                var formContent = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("username", username),
+                    new KeyValuePair<string, string>("password", password)
+                });
+
+                var myHttpClient = new HttpClient();
+                var response = myHttpClient.PostAsync(uri, formContent).Result;
 
                 if (response.StatusCode != System.Net.HttpStatusCode.Moved &&
                     response.StatusCode != System.Net.HttpStatusCode.MovedPermanently &&
@@ -40,11 +52,17 @@ namespace Lifeguard
                 // Get the stream of the content.
                 using (var reader = new StreamReader(responseContent.ReadAsStreamAsync().Result))
                 {
-                    // Write the output.
-                    //strip the " that seem to come along with the token
-                    var output = reader.ReadToEndAsync().Result;
-                    output = output.Replace("\"", "");
-                    return output;
+                    string output = "";
+                    try
+                    {
+                        output = reader.ReadToEndAsync().Result;
+                        var token = JsonConvert.DeserializeObject<Token>(output);
+                        return token.token;
+                    }
+                    catch (Exception e) {
+                        Logger.LogError("Bad data from token api: " + output);
+                        return "";
+                    }
                 }
             }
             catch (Exception e)

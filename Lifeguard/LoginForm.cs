@@ -11,6 +11,7 @@ using System.Configuration;
 using System.Net.Http;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 
 namespace Lifeguard
 {
@@ -82,7 +83,12 @@ namespace Lifeguard
 
         private void buttonSignIn_Click(object sender, EventArgs e)
         {
+            buttonSignIn.Enabled = false;
+            SetSigningInState();
+            Thread.Sleep(50);
             DoSignIn();
+            buttonSignIn.Enabled = true;
+            SetReadyToSigningInState();
         }
 
         private void DoSignIn() { 
@@ -92,12 +98,12 @@ namespace Lifeguard
             CurrentUsername = textBoxUsername.Text.Trim();
             var password = textBoxPassword.Text.Trim();
 
-            if (String.IsNullOrEmpty(CurrentUsername))
+            if (string.IsNullOrEmpty(CurrentUsername))
             {
                 labelErrorMessage.Text = "Username is required";
                 return;
             }
-            if (String.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(password))
             {
                 labelErrorMessage.Text = "Password is required";
                 return;
@@ -117,11 +123,12 @@ namespace Lifeguard
             }
 
             //invalid tokens come back with length 37
-            LoggedIn = CurrentToken.Length == 36;
+            LoggedIn = !string.IsNullOrEmpty(CurrentToken);
             if (LoggedIn)
             {
                 ConfigureFormState();
                 OnLoginComplete(CurrentUsername, CurrentToken);
+                ConfigRepo.SaveConfig(CurrentUsername, CurrentToken);
                 //wipe out the password, so that when they logout, it will be empty
                 textBoxPassword.Text = "";
             }
@@ -132,8 +139,7 @@ namespace Lifeguard
             }
         }
 
-        private void buttonSignOut_Click(object sender, EventArgs e)
-        {
+        private void sendLogoutNotification(string message) {
             try
             {
                 var client = new HttpClient();
@@ -141,19 +147,30 @@ namespace Lifeguard
                 // Create the HttpContent for the form to be posted.
                 var requestContent = new FormUrlEncodedContent(new[] {
                     new KeyValuePair<string, string>("token", CurrentToken),
-                    new KeyValuePair<string, string>("image", ConfigRepo.LOGOUT_STRING)
+                    new KeyValuePair<string, string>("image", message)
                 });
 
                 var response = client.PostAsync(ConfigRepo.GetScreenshotUri(), requestContent).Result;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 Logger.LogException(ex);
             }
+        }
 
-            ConfigRepo.SaveConfig("", "", "");
+        private void buttonSignOut_Click(object sender, EventArgs e)
+        {
+            sendLogoutNotification(ConfigRepo.LOGOUT_STRING);
+            ConfigRepo.SaveConfig("", "");
             LoggedIn = false;
             ConfigureFormState();
             OnLogoutComplete();
+        }
+
+        private void menuItemShutDownClick(object sender, EventArgs e)
+        {
+            sendLogoutNotification(ConfigRepo.SHUTDOWN_STRING);
+            Application.Exit();
         }
 
         public void ShowForm() {
@@ -175,7 +192,21 @@ namespace Lifeguard
 
         private void labelErrorMessage_Click(object sender, EventArgs e)
         {
-           
+
+        }
+
+        private void SetSigningInState() {
+            this.BeginInvoke(new MethodInvoker(delegate
+            {
+                this.labelLoading.Visible = true;
+            }));
+        }
+        private void SetReadyToSigningInState()
+        {
+            this.BeginInvoke(new MethodInvoker(delegate
+            {
+                this.labelLoading.Visible = false;
+            }));
         }
     }
 }

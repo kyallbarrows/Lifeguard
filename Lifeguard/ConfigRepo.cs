@@ -8,6 +8,7 @@ namespace Lifeguard
     class ConfigRepo
     {
         public const string LOGOUT_STRING = "LOGOUT";
+        public const string SHUTDOWN_STRING = "SHUTDOWN";
         private static object LockObject;
         private static object GetLockObject()
         {
@@ -21,19 +22,18 @@ namespace Lifeguard
         private const string SERVER_CONFIG_SETTING = "serveruri";
         public static string GetServerUri()
         {
-            var appSettings = ConfigurationManager.AppSettings;
-            return appSettings[SERVER_CONFIG_SETTING] ?? "";
+            return "https://big-red-barn-django.herokuapp.com";
         }
 
 
         public static string GetTokenUri()
         {
-            return GetServerUri() + "/wp-json/lifeguard/v1/token";
+            return GetServerUri() + "/api-token-auth/";
         }
 
         public static string GetScreenshotUri()
         {
-            return GetServerUri() + "/wp-json/lifeguard/v1/screenshot";
+            return GetServerUri() + "/api/feedposts/";
         }
 
         private static String GetConfigPath()
@@ -41,17 +41,19 @@ namespace Lifeguard
             return Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "phlg",
-                    "i.cfg");
+                    "i" + typeof(LifeguardBackgroundApp).Assembly.GetName().Version.ToString() + ".cfg");
         }
 
         public static LifeguardConfiguration GetConfig()
         {
+            var newConfig = new LifeguardConfiguration();
+            newConfig.MachineID = Guid.NewGuid().ToString("N");
+
             lock (GetLockObject())
             {
                 var path = GetConfigPath();
-                Console.WriteLine("Encryption Key File: " + path);
-
                 var fileInfo = new FileInfo(path);
+
                 if (fileInfo.Exists)
                 {
                     try
@@ -62,7 +64,7 @@ namespace Lifeguard
                     catch (JsonException je)
                     {
                         //config got corrupted somehow, create a new blank one
-                        return new LifeguardConfiguration();
+                        return newConfig;
                     }
                     catch (Exception e)
                     {
@@ -71,13 +73,14 @@ namespace Lifeguard
                 }
             }
 
-            return new LifeguardConfiguration();
+            return newConfig;
         }
 
 
-        public static void SaveConfig(string username, string token, string machineID)
+        public static void SaveConfig(string username, string token)
         {
-            var newConfig = new LifeguardConfiguration { Username = username, Token = token, MachineID = machineID };
+            var currentConfig = GetConfig();
+            var newConfig = new LifeguardConfiguration { Username = username, Token = token, MachineID = currentConfig.MachineID };
             SaveConfig(newConfig);
         }
 
