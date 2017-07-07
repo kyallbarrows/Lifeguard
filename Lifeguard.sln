@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LifeguardService", "Lifegua
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "LifeguardWixInstaller", "LifeguardWixInstaller\LifeguardWixInstaller.wixproj", "{47756AC3-98A1-4025-AD10-9A7949F4A4CF}"
 EndProject
-Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "LifeguardInstaller2", "LifeguardInstaller2\LifeguardInstaller2.wixproj", "{03082159-71A8-4DAB-B06E-7818691D33AF}"
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "LifeguardInstaller", "LifeguardInstaller2\LifeguardInstaller.wixproj", "{03082159-71A8-4DAB-B06E-7818691D33AF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LifeguardRestarter", "LifeguardRestarter\LifeguardRestarter.csproj", "{77514193-38F9-4B88-8DF3-142352CD2957}"
 EndProject
