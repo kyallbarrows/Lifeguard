@@ -142,18 +142,19 @@ namespace Lifeguard
             }
         }
 
-        private void sendLogoutNotification(string message) {
+        private void sendLogoutNotification(string token, string machineId, string message) {
             try
             {
                 var client = new HttpClient();
 
-                // Create the HttpContent for the form to be posted.
                 var requestContent = new FormUrlEncodedContent(new[] {
-                    new KeyValuePair<string, string>("token", CurrentToken),
-                    new KeyValuePair<string, string>("image", message)
+                    new KeyValuePair<string, string>("machineid", machineId),
+                    new KeyValuePair<string, string>("imagedata", message)
                 });
 
+                client.DefaultRequestHeaders.Add("Authorization", "Token " + token);
                 var response = client.PostAsync(ConfigRepo.GetScreenshotUri(), requestContent).Result;
+                Logger.LogError(response.IsSuccessStatusCode.ToString());
             }
             catch (Exception ex)
             {
@@ -163,7 +164,8 @@ namespace Lifeguard
 
         private void buttonSignOut_Click(object sender, EventArgs e)
         {
-            sendLogoutNotification(ConfigRepo.LOGOUT_STRING);
+            var config = ConfigRepo.GetConfig();
+            sendLogoutNotification(config.Token, config.MachineID, ConfigRepo.LOGOUT_STRING);
             ConfigRepo.SaveConfig("", "");
             LoggedIn = false;
             ConfigureFormState();
@@ -172,7 +174,8 @@ namespace Lifeguard
 
         private void menuItemShutDownClick(object sender, EventArgs e)
         {
-            sendLogoutNotification(ConfigRepo.SHUTDOWN_STRING);
+            var config = ConfigRepo.GetConfig();
+            sendLogoutNotification(config.Token, config.MachineID, ConfigRepo.SHUTDOWN_STRING);
             OnShutdownApplication();
         }
 
