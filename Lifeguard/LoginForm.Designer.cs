@@ -127,13 +127,13 @@
             this.labelErrorMessage.Name = "labelErrorMessage";
             this.labelErrorMessage.Size = new System.Drawing.Size(576, 13);
             this.labelErrorMessage.TabIndex = 7;
-            this.labelErrorMessage.Text = "Username is required and stuff should go here fdafdafdsafdsafdsafdsafdsafdsafdsaf" +
-    "dsafdsafdsafdsafdsafdsafdsafdsafdsa";
+            this.labelErrorMessage.Text = "Generic error";
             this.labelErrorMessage.Click += new System.EventHandler(this.labelErrorMessage_Click);
             // 
             // panelLoggedIn
             // 
             this.panelLoggedIn.Controls.Add(this.labelLoggedInAs);
+            this.panelLoggedIn.Controls.Add(this.buttonSignOut);
             this.panelLoggedIn.Location = new System.Drawing.Point(12, 35);
             this.panelLoggedIn.Name = "panelLoggedIn";
             this.panelLoggedIn.Size = new System.Drawing.Size(308, 185);
