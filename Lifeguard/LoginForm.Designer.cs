@@ -1,4 +1,6 @@
-﻿namespace Lifeguard
+﻿using System;
+
+namespace Lifeguard
 {
     partial class LoginForm
     {
@@ -95,7 +97,8 @@
             this.linkLabelForgotPassword.Size = new System.Drawing.Size(91, 13);
             this.linkLabelForgotPassword.TabIndex = 4;
             this.linkLabelForgotPassword.TabStop = true;
-            this.linkLabelForgotPassword.Text = "forgot password...";
+            this.linkLabelForgotPassword.Text = "Forgot password...";
+            this.linkLabelForgotPassword.Click += new System.EventHandler(this.linkLabelForgotPassword_Click);
             // 
             // labelLoggedInAs
             // 
@@ -221,6 +224,11 @@
             this.ResumeLayout(false);
             this.PerformLayout();
 
+        }
+
+        private void linkLabelForgotPassword_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start("http://www.lifeguardmonitor.com/resetpassword");
         }
 
         #endregion
