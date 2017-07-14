@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   
-	<Product Id="*" Name="Lifeguard Accountability" Language="1033" Version="1.0.11.0" Manufacturer="Pixel Heavy Industries" UpgradeCode="7a6da711-b3f9-43d5-83ca-080219a45140">
+	<Product Id="*" Name="Lifeguard Accountability" Language="1033" Version="1.0.12.0" Manufacturer="Pixel Heavy Industries" UpgradeCode="7a6da711-b3f9-43d5-83ca-080219a45140">
     <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 	  <WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
 
