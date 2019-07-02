@@ -28,7 +28,7 @@ namespace Lifeguard
 
         public static string GetTokenUri()
         {
-            return GetServerUri() + "/api-token-auth/";
+            return GetServerUri() + "/api/tokenauth/";
         }
 
         public static string GetScreenshotUri()
@@ -46,9 +46,6 @@ namespace Lifeguard
 
         public static LifeguardConfiguration GetConfig()
         {
-            var newConfig = new LifeguardConfiguration();
-            newConfig.MachineID = Guid.NewGuid().ToString("N");
-
             lock (GetLockObject())
             {
                 var path = GetConfigPath();
@@ -59,12 +56,14 @@ namespace Lifeguard
                     try
                     {
                         string contents = File.ReadAllText(fileInfo.FullName);
-                        return JsonConvert.DeserializeObject<LifeguardConfiguration>(contents) ?? new LifeguardConfiguration();
+                        var loadedConfig = JsonConvert.DeserializeObject<LifeguardConfiguration>(contents);
+                        if (loadedConfig != null) {
+                            return loadedConfig;
+                        }
                     }
                     catch (JsonException je)
                     {
                         //config got corrupted somehow, create a new blank one
-                        return newConfig;
                     }
                     catch (Exception e)
                     {
@@ -72,6 +71,10 @@ namespace Lifeguard
                     }
                 }
             }
+
+            var newConfig = new LifeguardConfiguration();
+            newConfig.MachineID = Guid.NewGuid().ToString("N");
+            SaveConfig(newConfig);
 
             return newConfig;
         }

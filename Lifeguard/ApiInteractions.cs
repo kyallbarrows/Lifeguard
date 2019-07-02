@@ -26,10 +26,14 @@ namespace Lifeguard
             var uri = ConfigRepo.GetTokenUri();
             try
             {
+                var machineId = ConfigRepo.GetConfig().MachineID;
                 var formContent = new FormUrlEncodedContent(new[]
                 {
                     new KeyValuePair<string, string>("username", username),
-                    new KeyValuePair<string, string>("password", password)
+                    new KeyValuePair<string, string>("password", password),
+                    new KeyValuePair<string, string>("installid", machineId),
+                    new KeyValuePair<string, string>("deviceplatform", "Windows"),
+                    new KeyValuePair<string, string>("osversion", "10")
                 });
 
                 var myHttpClient = new HttpClient();

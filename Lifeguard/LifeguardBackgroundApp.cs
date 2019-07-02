@@ -29,8 +29,8 @@ namespace Lifeguard
 
 
         //TODO: these might be different between free and paid accounts, to save on hosting costs
-        private const int MIN_DELAY = 3 * 60;
-        private const int MAX_DELAY = 10 * 60;
+        private const int MIN_DELAY = 7 * 60;
+        private const int MAX_DELAY = 15 * 60;
         private const int LOOP_TIME_MILLISECONDS = 1 * 1000;
         private const double MIN_DIFFERENCE = .05d;
 
@@ -125,12 +125,21 @@ namespace Lifeguard
                          
                     try
                     {
+                        foreach (var screen in Screen.AllScreens)
+                        {
+                            using (Bitmap thisScreenshot = GetSingleScreenshiot(screen)) {
+                                if (thisScreenshot != null) {
+                                    PostScreenshot(thisScreenshot, Config.Token, Config.MachineID);
+                                }
+                            }
+                        }
+
                         //capture screenshot to temp folder
-                        using (Bitmap newImage = CaptureScreenshot())
+                        /*using (Bitmap newImage = CaptureScreenshot())
                         {
                             if (newImage != null)
                                 PostScreenshot(newImage, Config.Token, Config.MachineID);
-                        }
+                        }*/
                     }
                     catch (Exception e)
                     {
@@ -263,9 +272,8 @@ namespace Lifeguard
                 //base64String = "/9j/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/sABFEdWNreQABAAQAAAA8AAD/4QMxaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLwA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/PiA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJBZG9iZSBYTVAgQ29yZSA1LjYtYzEzOCA3OS4xNTk4MjQsIDIwMTYvMDkvMTQtMDE6MDk6MDEgICAgICAgICI+IDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+IDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE3IChNYWNpbnRvc2gpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkZFMzI4MkY5NTQ4QjExRTc5RENBRjI2NzNCOEJBMjYwIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkZFMzI4MkZBNTQ4QjExRTc5RENBRjI2NzNCOEJBMjYwIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6RkUzMjgyRjc1NDhCMTFFNzlEQ0FGMjY3M0I4QkEyNjAiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6RkUzMjgyRjg1NDhCMTFFNzlEQ0FGMjY3M0I4QkEyNjAiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7/7gAOQWRvYmUAZMAAAAAB/9sAhAAGBAQEBQQGBQUGCQYFBgkLCAYGCAsMCgoLCgoMEAwMDAwMDBAMDg8QDw4MExMUFBMTHBsbGxwfHx8fHx8fHx8fAQcHBw0MDRgQEBgaFREVGh8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx//wAARCAAIAAgDAREAAhEBAxEB/8QASgABAAAAAAAAAAAAAAAAAAAACAEBAAAAAAAAAAAAAAAAAAAAABABAAAAAAAAAAAAAAAAAAAAABEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVIP/2Q==";
                 // Create the HttpContent for the form to be posted.
                 var requestContent = new FormUrlEncodedContent(new[] {
-                    new KeyValuePair<string, string>("machineid", machineId),
+                    new KeyValuePair<string, string>("installid", machineId),
                     new KeyValuePair<string, string>("imagedata", base64String),
-                    new KeyValuePair<string, string>("useragent", useragent),
                 });
 
                 //                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Authorization", "Token " + token);
@@ -280,6 +288,10 @@ namespace Lifeguard
                 {
                     // Write the output.
                     var output = reader.ReadToEndAsync().Result;
+                    if (output.Contains("such device")){
+                        Logger.LogError(output);
+                    }
+
                     Console.WriteLine(output);
                 }
             }
@@ -288,7 +300,84 @@ namespace Lifeguard
             }
         }
 
-       
+
+        protected Bitmap GetSingleScreenshiot(Screen screen) {
+            //screen.Bounds.Width;
+
+            var scale = 1f;
+            var maxDimension = 200f;
+            int shrankenWidth = 0;
+            int shrankenHeight = 0;
+
+            if (screen.Bounds.Width > screen.Bounds.Height)
+            {
+                scale = maxDimension / (float)screen.Bounds.Height;
+                shrankenWidth = (int)Math.Floor((float)screen.Bounds.Width * scale);
+                shrankenHeight = (int)maxDimension;
+            }
+            else
+            {
+                scale = maxDimension / (float)screen.Bounds.Width;
+                shrankenWidth = (int)maxDimension;
+                shrankenHeight = (int)Math.Floor((float)screen.Bounds.Height * scale);
+            }
+
+            if (shrankenWidth == 0 || shrankenHeight == 0)
+            {
+                Logger.LogError("Bitmap has 0 width or height " + shrankenWidth + "x" + shrankenHeight);
+                return null;
+            }
+
+            try
+            {
+                Bitmap bmpShranken = new Bitmap(shrankenWidth, shrankenHeight);
+
+                using (var graph = Graphics.FromImage(bmpShranken))
+                {
+                    graph.InterpolationMode = InterpolationMode.High;
+                    graph.CompositingQuality = CompositingQuality.HighQuality;
+                    graph.SmoothingMode = SmoothingMode.AntiAlias;
+                    graph.FillRectangle(new SolidBrush(Color.Black), new RectangleF(0, 0, shrankenWidth, shrankenHeight));
+
+                    using (Bitmap bmpScreenCapture = new Bitmap(screen.Bounds.Width, screen.Bounds.Height))
+                    {
+                        try
+                        {
+                            using (Graphics g = Graphics.FromImage(bmpScreenCapture))
+                            {
+                                g.CopyFromScreen(screen.Bounds.X,
+                                                 screen.Bounds.Y,
+                                                 0, 0,
+                                                 bmpScreenCapture.Size,
+                                                 CopyPixelOperation.SourceCopy);
+
+                                float screenShrankenWidth = scale * bmpScreenCapture.Width;
+                                float screenShrankenHeight = scale * bmpScreenCapture.Height;
+                                graph.DrawImage(bmpScreenCapture,
+                                                new Rectangle(
+                                                    0,
+                                                    0,
+                                                    (int)Math.Floor(screenShrankenWidth),
+                                                    (int)Math.Floor(screenShrankenHeight))
+                                                );
+                            }
+
+                        }
+                        catch (Exception e)
+                        {
+                        }
+                    }
+                }
+
+                return bmpShranken;
+            }
+            catch (Exception e)
+            {
+                Logger.LogException(e);
+                return null;
+            }
+        }
+
 
         protected Bitmap CaptureScreenshot()
         {
@@ -303,9 +392,23 @@ namespace Lifeguard
                 height = Math.Max(height, screen.Bounds.Height);
             }
 
-            var scale = .2f;
-            int shrankenWidth = (int)Math.Floor((float)totalWidth * scale);
-            int shrankenHeight = (int)Math.Floor((float)height * scale);
+            var scale = 1f;
+            var maxDimension = 100f;
+            int shrankenWidth = 0;
+            int shrankenHeight = 0;
+
+            if (totalWidth > height)
+            {
+                scale = maxDimension / (float)height;
+                shrankenWidth = (int)Math.Floor((float)totalWidth * scale);
+                shrankenHeight = (int)maxDimension;
+            }
+            else {
+                scale = maxDimension / (float)totalWidth;
+                shrankenWidth = (int)maxDimension;
+                shrankenHeight = (int)Math.Floor((float)height * scale);
+            }
+
             if (shrankenWidth == 0 || shrankenHeight == 0)
             {
                 Logger.LogError("Bitmap has 0 width or height " + shrankenWidth + "x" + shrankenHeight);

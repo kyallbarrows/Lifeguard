@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\Users\Kyall\.Rider2018.3\system\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\Kyall\.Rider2018.3\system\resharper-host\local\Transient\ReSharperHost\v183\SolutionCaches\_Lifeguard.-114563287.00" t="ExcludeRecursive" />
+    <e p="D:\Development\Lifeguard" t="IncludeFlat">
+      <e p="Lifeguard" t="IncludeRecursive">
+        <e p="ApiInteractions.cs" t="Include" />
+        <e p="App.config" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="ConfigRepo.cs" t="Include" />
+        <e p="FodyWeavers.xml" t="Include" />
+        <e p="Lifeguard.csproj" t="IncludeRecursive" />
+        <e p="LifeguardBackgroundApp.cs" t="Include" />
+        <e p="LifeguardConfiguration.cs" t="Include" />
+        <e p="Logger.cs" t="Include" />
+        <e p="LoginForm.cs" t="Include" />
+        <e p="LoginForm.Designer.cs" t="Include" />
+        <e p="LoginForm.resx" t="Include" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="packages.config" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+        <e p="Resource1.Designer.cs" t="Include" />
+        <e p="Resource1.resx" t="Include" />
+        <e p="TrayIcon.ico" t="Include" />
+      </e>
+      <e p="Lifeguard.sln" t="IncludeFlat" />
+      <e p="LifeguardInstaller2" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="eula.rtf" t="Include" />
+        <e p="eula2.txt" t="Include" />
+        <e p="LifeguardInstaller.wixproj" t="IncludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="Product.wxs" t="Include" />
+        <e p="WixUIExtension" t="Include" />
+        <e p="WixUtilExtension" t="Include" />
+      </e>
+      <e p="LifeguardRestarter" t="IncludeRecursive">
+        <e p="App.config" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="LifeguardRestarter.csproj" t="IncludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="packages.config" t="Include" />
+        <e p="Program.cs" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+      </e>
+      <e p="LifeguardService" t="IncludeRecursive">
+        <e p="App.config" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="LifeguardService.csproj" t="IncludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="Program.cs" t="Include" />
+        <e p="ProjectInstaller.cs" t="Include" />
+        <e p="ProjectInstaller.Designer.cs" t="Include" />
+        <e p="ProjectInstaller.resx" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+        <e p="Service1.cs" t="Include" />
+        <e p="Service1.Designer.cs" t="Include" />
+      </e>
+      <e p="LifeguardWixInstaller" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Library.wxs" t="Include" />
+        <e p="LifeguardWixInstaller.wixproj" t="IncludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+      </e>
+      <e p="packages" t="ExcludeRecursive" />
+    </e>
+  </component>
+</project>
