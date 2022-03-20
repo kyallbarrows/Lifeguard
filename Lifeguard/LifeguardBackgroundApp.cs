@@ -29,8 +29,8 @@ namespace Lifeguard
 
 
         //TODO: these might be different between free and paid accounts, to save on hosting costs
-        private const int MIN_DELAY = 7 * 60;
-        private const int MAX_DELAY = 15 * 60;
+        private const int MIN_DELAY = 12 * 60;
+        private const int MAX_DELAY = 25 * 60;
         private const int LOOP_TIME_MILLISECONDS = 1 * 1000;
         private const double MIN_DIFFERENCE = .05d;
 
@@ -304,12 +304,12 @@ namespace Lifeguard
         protected Bitmap GetSingleScreenshiot(Screen screen) {
             //screen.Bounds.Width;
 
-            var scale = 1f;
-            var maxDimension = 200f;
-            int shrankenWidth = 0;
-            int shrankenHeight = 0;
+            var scale = .25f;
+            var maxDimension = 400f;
+            int shrankenWidth = (int)Math.Floor((float)screen.Bounds.Width * scale);
+            int shrankenHeight = (int)Math.Floor((float)screen.Bounds.Height * scale); ;
 
-            if (screen.Bounds.Width > screen.Bounds.Height)
+            /*if (screen.Bounds.Width > screen.Bounds.Height)
             {
                 scale = maxDimension / (float)screen.Bounds.Height;
                 shrankenWidth = (int)Math.Floor((float)screen.Bounds.Width * scale);
@@ -326,7 +326,7 @@ namespace Lifeguard
             {
                 Logger.LogError("Bitmap has 0 width or height " + shrankenWidth + "x" + shrankenHeight);
                 return null;
-            }
+            }*/
 
             try
             {
